@@ -67,9 +67,15 @@ if filtered_records:
     df = df.sort_values(by="日期", ascending=False).reset_index(drop=True)
     df_display = df.copy()
     df_display["金額"] = df_display["金額"].apply(lambda x: f"NT${x:.2f}")
-   df_display["日期"] = pd.to_datetime(df_display["日期"])
-df_display["日期"] = df_display["日期"].dt.strftime("%Y-%m-%d")
+      # 合併日期欄位（相同日期只顯示一次）
+    df_display["金額"] = df_display["金額"].apply(lambda x: f"NT${x:.2f}")
+    df_display["日期"] = pd.to_datetime(df_display["日期"])
+    df_display["日期"] = df_display["日期"].dt.strftime("%Y-%m-%d")
     df_display.loc[df_display["日期"].duplicated(), "日期"] = ""
+
+    # 加上顏色樣式
+    def highlight_date(val):
+        return "background-color: #d0ebff" if val != "" else ""
 
     # 加上顏色樣式
     def highlight_date(val):
