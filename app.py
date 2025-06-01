@@ -60,19 +60,27 @@ else:
         st.session_state.edit_index = None
         st.success("✏️ 修改完成")
 
-# ➤ 表格樣式的帳目清單
+# ➤ 表格樣式的帳目清單（含日期合併顯示＋上色）
 st.header("📋 帳目清單（表格樣式）")
 if filtered_records:
     df = pd.DataFrame(filtered_records)
     df = df.sort_values(by="日期", ascending=False).reset_index(drop=True)
     df_display = df.copy()
     df_display["金額"] = df_display["金額"].apply(lambda x: f"NT${x:.2f}")
-    df_display.index = df_display.index + 1  # 顯示從 1 開始
 
-    st.dataframe(df_display, use_container_width=True, hide_index=False)
+    # 合併日期欄位（相同日期只顯示一次）
+    df_display["日期"] = df_display["日期"].dt.strftime("%Y-%m-%d")
+    df_display.loc[df_display["日期"].duplicated(), "日期"] = ""
 
-    # ➤ 編輯／刪除按鈕（單列）
-    selected_row = st.number_input("🔧 請輸入要修改／刪除的編號", min_value=1, max_value=len(df), step=1)
+    # 表格樣式呈現
+    def highlight_date(val):
+        return "background-color: #d0ebff" if val != "" else ""
+
+    styled_df = df_display.style.applymap(highlight_date, subset=["日期"])
+    st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+    # ➤ 編輯／刪除按鈕
+    selected_row = st.number_input("🔧 請輸入要修改／刪除的列數（上方表格的順序）", min_value=1, max_value=len(df), step=1)
     selected_index = df.index[selected_row - 1]
 
     col3, col4 = st.columns(2)
