@@ -26,8 +26,8 @@ else:
 if "edit_index" not in st.session_state:
     st.session_state.edit_index = None
 
-st.set_page_config(page_title="每日花費記帳&消費分析", page_icon="📒")
-st.title("📒 簡單記帳 ")
+st.set_page_config(page_title="簡單記帳", page_icon="📒")
+st.title("📒 簡單記帳 App")
 
 def save_records():
     to_save = [
@@ -77,6 +77,19 @@ else:
         st.session_state.edit_index = None
         st.success("✏️ 修改完成")
         st.rerun()
+
+# 💰 今日與本月總支出
+if st.session_state.records:
+    today = date.today()
+    this_month = today.strftime("%Y-%m")
+
+    df_total = pd.DataFrame(st.session_state.records)
+    today_total = df_total[df_total["日期"] == today]["金額"].sum()
+    month_total = df_total[df_total["日期"].apply(lambda d: d.strftime("%Y-%m") == this_month)]["金額"].sum()
+
+    st.subheader("💰 支出總覽")
+    st.markdown(f"📆 **今日支出：NT${today_total:.2f}**")
+    st.markdown(f"📅 **本月支出：NT${month_total:.2f}**")
 
 # 📋 帳目清單
 st.header("📋 帳目清單")
