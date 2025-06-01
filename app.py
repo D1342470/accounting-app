@@ -10,8 +10,8 @@ if "records" not in st.session_state:
 if "edit_index" not in st.session_state:
     st.session_state.edit_index = None
 
-st.set_page_config(page_title="簡單記帳", page_icon="📒")
-st.title("📒 簡單記帳 App")
+st.set_page_config(page_title="每日花費記帳&消費分析", page_icon="📒")
+st.title("📒 我的記帳小幫手")
 st.markdown("記錄你的每日支出，簡單好用、圖表清晰！")
 
 # ➤ 篩選月份
