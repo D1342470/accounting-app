@@ -26,8 +26,8 @@ else:
 if "edit_index" not in st.session_state:
     st.session_state.edit_index = None
 
-st.set_page_config(page_title="簡單記帳", page_icon="📒")
-st.title("📒 簡單記帳 App")
+st.set_page_config(page_title="每日花費記帳&消費分析", page_icon="📒")
+st.title("📒 簡單記帳 ")
 
 def save_records():
     to_save = [
@@ -42,7 +42,7 @@ def save_records():
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(to_save, f, ensure_ascii=False, indent=2)
 
-# ➕ 輸入表單
+# ➕ 新增 / 修改支出
 st.header("✏️ 新增 / 修改支出")
 col1, col2 = st.columns(2)
 with col1:
@@ -78,7 +78,7 @@ else:
         st.success("✏️ 修改完成")
         st.rerun()
 
-# 💰 今日與本月總支出
+# 💰 支出總覽
 if st.session_state.records:
     today = date.today()
     this_month = today.strftime("%Y-%m")
@@ -98,7 +98,7 @@ if not st.session_state.records:
     st.info("目前沒有資料")
 else:
     df = pd.DataFrame(st.session_state.records)
-    df = df.sort_values(by="日期").reset_index(drop=True)
+    df = df.sort_values(by="日期")
 
     # 🔍 搜尋與月份篩選
     with st.expander("🔍 搜尋與月份篩選"):
@@ -114,6 +114,8 @@ else:
     if df.empty:
         st.warning("找不到符合條件的資料")
     else:
+        df = df.reset_index(drop=False)  # 保留原始索引作為 index 欄
+
         df['日期顯示'] = df['日期'].astype(str)
         prev_date = ""
         for i in range(len(df)):
@@ -134,22 +136,21 @@ else:
                 st.markdown(row['備註'] or "—")
             with col5:
                 if st.button("✏️", key=f"edit_{idx}"):
-                    st.session_state.edit_index = df.index[idx]
+                    st.session_state.edit_index = row["index"]
                     st.rerun()
             with col6:
                 if st.button("🗑️", key=f"delete_{idx}"):
-                    st.session_state.records.pop(df.index[idx])
+                    st.session_state.records.pop(row["index"])
                     save_records()
                     st.success("✅ 已刪除")
                     st.rerun()
 
-# 📊 圖表與匯出
+# 📊 支出圖表 + 匯出
 if st.session_state.records:
     st.subheader("📊 各分類支出圖")
     chart_data = pd.DataFrame(st.session_state.records).groupby("分類")["金額"].sum().reset_index()
     fig = px.pie(chart_data, names="分類", values="金額", title="分類支出比例", hole=0.3)
     st.plotly_chart(fig, use_container_width=True)
 
-    # 匯出 CSV
     csv_data = pd.DataFrame(st.session_state.records).to_csv(index=False).encode("utf-8-sig")
     st.download_button("📥 匯出資料為 CSV", data=csv_data, file_name="記帳資料.csv", mime="text/csv")
