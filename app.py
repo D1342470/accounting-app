@@ -26,8 +26,8 @@ else:
 if "edit_index" not in st.session_state:
     st.session_state.edit_index = None
 
-st.set_page_config(page_title="簡單記帳", page_icon="📒")
-st.title("📒 簡單記帳 App")
+st.set_page_config(page_title="每日花費記帳&消費分析", page_icon="📒")
+st.title("📒 簡單記帳 ")
 
 def save_records():
     to_save = [
