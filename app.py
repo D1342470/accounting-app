@@ -10,8 +10,8 @@ if "records" not in st.session_state:
 if "edit_index" not in st.session_state:
     st.session_state.edit_index = None
 
-st.set_page_config(page_title="每日花費記帳&消費分析", page_icon="📒")
-st.title("📒 我的記帳小幫手")
+st.set_page_config(page_title="簡單記帳", page_icon="📒")
+st.title("📒 簡單記帳 App")
 st.markdown("記錄你的每日支出，簡單好用、圖表清晰！")
 
 # ➤ 篩選月份
@@ -60,14 +60,15 @@ else:
         st.session_state.edit_index = None
         st.success("✏️ 修改完成")
 
-# ➤ 表格顯示函式：同一天只顯示一次日期
+# ➤ 表格顯示函式：同一天只顯示一次日期，日期由早到晚排序
 def show_accounting_table(records):
     if not records:
         st.info("目前沒有資料喔！")
         return
 
     df = pd.DataFrame(records)
-    df = df.sort_values(by="日期", ascending=False).reset_index(drop=True)
+    # 日期由早到晚排序（升冪）
+    df = df.sort_values(by="日期", ascending=True).reset_index(drop=True)
 
     # 日期欄位做群組：同一天只顯示一次日期
     df['日期顯示'] = df['日期'].astype(str)
@@ -96,7 +97,7 @@ show_accounting_table(filtered_records)
 # ➤ 修改與刪除功能
 if filtered_records:
     df = pd.DataFrame(filtered_records)
-    df = df.sort_values(by="日期", ascending=False).reset_index(drop=True)
+    df = df.sort_values(by="日期", ascending=True).reset_index(drop=True)
     st.markdown("---")
     st.header("🔧 修改或刪除")
 
@@ -105,7 +106,6 @@ if filtered_records:
 
     col3, col4 = st.columns(2)
     if col3.button("✏️ 修改這筆"):
-        # 找回該筆在原始資料的位置（session_state.records）
         selected_record = df.iloc[selected_index].to_dict()
         for i, rec in enumerate(st.session_state.records):
             if rec == selected_record:
