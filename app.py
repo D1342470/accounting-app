@@ -76,7 +76,7 @@ else:
         save_records()
         st.session_state.edit_index = None
         st.success("✏️ 修改完成")
-        st.experimental_rerun()
+        st.rerun()
 
 # 📋 帳目清單
 st.header("📋 帳目清單")
@@ -122,13 +122,13 @@ else:
             with col5:
                 if st.button("✏️", key=f"edit_{idx}"):
                     st.session_state.edit_index = df.index[idx]
-                    st.experimental_rerun()
+                    st.rerun()
             with col6:
                 if st.button("🗑️", key=f"delete_{idx}"):
                     st.session_state.records.pop(df.index[idx])
                     save_records()
                     st.success("✅ 已刪除")
-                    st.experimental_rerun()
+                    st.rerun()
 
 # 📊 圖表與匯出
 if st.session_state.records:
