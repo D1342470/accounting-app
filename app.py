@@ -10,8 +10,8 @@ if "records" not in st.session_state:
 if "edit_index" not in st.session_state:
     st.session_state.edit_index = None
 
-st.set_page_config(page_title="簡單記帳", page_icon="📒")
-st.title("📒 簡單記帳 App")
+st.set_page_config(page_title="每日花費記帳&消費分析", page_icon="📒")
+st.title("📒 我的記帳小幫手")
 st.markdown("記錄你的每日支出，簡單好用、圖表清晰！")
 
 # ➤ 篩選月份
@@ -60,31 +60,67 @@ else:
         st.session_state.edit_index = None
         st.success("✏️ 修改完成")
 
-# ➤ 表格樣式的帳目清單
-st.header("📋 帳目清單（表格樣式）")
+# ➤ 表格顯示函式：同一天只顯示一次日期
+def show_accounting_table(records):
+    if not records:
+        st.info("目前沒有資料喔！")
+        return
+
+    df = pd.DataFrame(records)
+    df = df.sort_values(by="日期", ascending=False).reset_index(drop=True)
+
+    # 日期欄位做群組：同一天只顯示一次日期
+    df['日期顯示'] = df['日期'].astype(str)
+    prev_date = ""
+    for i in range(len(df)):
+        if df.at[i, '日期顯示'] == prev_date:
+            df.at[i, '日期顯示'] = ""
+        else:
+            prev_date = df.at[i, '日期顯示']
+
+    df_display = df[['日期顯示', '分類', '金額', '備註']].copy()
+    df_display.columns = ['日期', '分類', '金額', '備註']
+
+    # 格式化金額顯示
+    df_display['金額'] = df_display['金額'].apply(lambda x: f"NT${x:.2f}")
+
+    # 重新設定 index 從 1 開始
+    df_display.index = range(1, len(df_display) + 1)
+
+    st.table(df_display)
+
+# ➤ 顯示帳目清單
+st.header("📋 帳目清單")
+show_accounting_table(filtered_records)
+
+# ➤ 修改與刪除功能
 if filtered_records:
     df = pd.DataFrame(filtered_records)
     df = df.sort_values(by="日期", ascending=False).reset_index(drop=True)
-    df_display = df.copy()
-    df_display["金額"] = df_display["金額"].apply(lambda x: f"NT${x:.2f}")
-    df_display.index = df_display.index + 1  # 顯示從 1 開始
+    st.markdown("---")
+    st.header("🔧 修改或刪除")
 
-    st.dataframe(df_display, use_container_width=True, hide_index=False)
-
-    # ➤ 編輯／刪除按鈕（單列）
-    selected_row = st.number_input("🔧 請輸入要修改／刪除的編號", min_value=1, max_value=len(df), step=1)
+    selected_row = st.number_input("請輸入要修改或刪除的編號", min_value=1, max_value=len(df), step=1)
     selected_index = df.index[selected_row - 1]
 
     col3, col4 = st.columns(2)
     if col3.button("✏️ 修改這筆"):
-        st.session_state.edit_index = st.session_state.records.index(df.iloc[selected_index].to_dict())
+        # 找回該筆在原始資料的位置（session_state.records）
+        selected_record = df.iloc[selected_index].to_dict()
+        for i, rec in enumerate(st.session_state.records):
+            if rec == selected_record:
+                st.session_state.edit_index = i
+                break
         st.experimental_rerun()
+
     if col4.button("🗑️ 刪除這筆"):
-        st.session_state.records.pop(st.session_state.records.index(df.iloc[selected_index].to_dict()))
+        selected_record = df.iloc[selected_index].to_dict()
+        for i, rec in enumerate(st.session_state.records):
+            if rec == selected_record:
+                st.session_state.records.pop(i)
+                break
         st.success("✅ 已刪除")
         st.experimental_rerun()
-else:
-    st.info("目前沒有資料喔！")
 
 # ➤ 匯出 CSV
 if filtered_records:
