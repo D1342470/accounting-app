@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date
 import plotly.express as px
 
-# 初始化 session state
+# 初始化 session_state
 if "records" not in st.session_state:
     st.session_state.records = []
 
@@ -17,6 +17,7 @@ st.markdown("記錄你的每日支出，簡單好用、圖表清晰！")
 # ➤ 篩選月份
 all_dates = [r["日期"] for r in st.session_state.records]
 all_months = sorted(list(set([d.strftime("%Y-%m") for d in all_dates])))
+
 selected_month = st.selectbox("📅 選擇月份（空白代表全部）", [""] + all_months)
 
 def filter_by_month(records, month):
@@ -26,7 +27,7 @@ def filter_by_month(records, month):
 
 filtered_records = filter_by_month(st.session_state.records, selected_month)
 
-# ➤ 輸入區
+# ➤ 輸入區塊
 st.header("✏️ 新增或修改支出")
 col1, col2 = st.columns(2)
 with col1:
@@ -36,7 +37,6 @@ with col2:
     input_amount = st.number_input("💵 金額", min_value=0.0, format="%.2f")
     input_note = st.text_input("📝 備註", "")
 
-# ➤ 新增 or 修改資料
 if st.session_state.edit_index is None:
     if st.button("➕ 新增"):
         if input_amount > 0:
@@ -46,7 +46,7 @@ if st.session_state.edit_index is None:
                 "金額": input_amount,
                 "備註": input_note
             })
-            st.success("✅ 新增成功")
+            st.success("✅ 新增成功！")
         else:
             st.error("⚠️ 金額需大於 0")
 else:
@@ -60,32 +60,19 @@ else:
         st.session_state.edit_index = None
         st.success("✏️ 修改完成")
 
-# ➤ 表格樣式帳目清單（日期合併顯示 + 顏色標記）
+# ➤ 表格樣式的帳目清單
 st.header("📋 帳目清單（表格樣式）")
 if filtered_records:
     df = pd.DataFrame(filtered_records)
     df = df.sort_values(by="日期", ascending=False).reset_index(drop=True)
     df_display = df.copy()
     df_display["金額"] = df_display["金額"].apply(lambda x: f"NT${x:.2f}")
-      # 合併日期欄位（相同日期只顯示一次）
-    df_display["金額"] = df_display["金額"].apply(lambda x: f"NT${x:.2f}")
-    df_display["日期"] = pd.to_datetime(df_display["日期"])
-    df_display["日期"] = df_display["日期"].dt.strftime("%Y-%m-%d")
-    df_display.loc[df_display["日期"].duplicated(), "日期"] = ""
+    df_display.index = df_display.index + 1  # 顯示從 1 開始
 
-    # 加上顏色樣式
-    def highlight_date(val):
-        return "background-color: #d0ebff" if val != "" else ""
+    st.dataframe(df_display, use_container_width=True, hide_index=False)
 
-    # 加上顏色樣式
-    def highlight_date(val):
-        return "background-color: #d0ebff" if val != "" else ""
-
-    styled_df = df_display.style.applymap(highlight_date, subset=["日期"])
-    st.dataframe(styled_df, use_container_width=True, hide_index=True)
-
-    # ➤ 編輯與刪除
-    selected_row = st.number_input("🔧 請輸入要修改／刪除的列數（上方表格的順序）", min_value=1, max_value=len(df), step=1)
+    # ➤ 編輯／刪除按鈕（單列）
+    selected_row = st.number_input("🔧 請輸入要修改／刪除的編號", min_value=1, max_value=len(df), step=1)
     selected_index = df.index[selected_row - 1]
 
     col3, col4 = st.columns(2)
@@ -97,16 +84,16 @@ if filtered_records:
         st.success("✅ 已刪除")
         st.experimental_rerun()
 else:
-    st.info("目前沒有資料喔～")
+    st.info("目前沒有資料喔！")
 
-# ➤ 匯出功能
+# ➤ 匯出 CSV
 if filtered_records:
-    csv = pd.DataFrame(filtered_records).to_csv(index=False).encode("utf-8-sig")
-    st.download_button("📥 匯出為 CSV", data=csv, file_name="記帳資料.csv", mime="text/csv")
+    csv_data = pd.DataFrame(filtered_records).to_csv(index=False).encode("utf-8-sig")
+    st.download_button("📥 匯出目前資料為 CSV", data=csv_data, file_name="記帳資料.csv", mime="text/csv")
 
-# ➤ 分類支出圓餅圖
+# ➤ 圖表區
 if filtered_records:
-    st.subheader("📊 各分類支出比例")
+    st.subheader("📊 各分類支出圖")
     chart_data = pd.DataFrame(filtered_records).groupby("分類")["金額"].sum().reset_index()
-    fig = px.pie(chart_data, names="分類", values="金額", title="支出比例", hole=0.3)
+    fig = px.pie(chart_data, names="分類", values="金額", title="分類支出比例", hole=0.3)
     st.plotly_chart(fig, use_container_width=True)
