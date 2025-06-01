@@ -26,8 +26,8 @@ else:
 if "edit_index" not in st.session_state:
     st.session_state.edit_index = None
 
-st.set_page_config(page_title="每日花費記帳&消費分析", page_icon="📒")
-st.title("📒 簡單記帳 ")
+st.set_page_config(page_title="簡單記帳", page_icon="📒")
+st.title("📒 簡單記帳 App")
 
 def save_records():
     to_save = [
@@ -78,52 +78,50 @@ else:
         st.success("✏️ 修改完成")
         st.rerun()
 
-# 💰 支出總覽
+# 📋 帳目清單與月份篩選
 if st.session_state.records:
-    today = date.today()
-    this_month = today.strftime("%Y-%m")
-
     df_total = pd.DataFrame(st.session_state.records)
+    today = date.today()
+
+    st.subheader("📅 查詢 / 篩選")
+    keyword = st.text_input("🔍 搜尋關鍵字（分類或備註）").strip()
+    all_months = sorted(set([r["日期"].strftime("%Y-%m") for r in st.session_state.records]))
+    selected_month = st.selectbox("📆 選擇月份", ["全部"] + all_months)
+
+    # 今日支出
     today_total = df_total[df_total["日期"] == today]["金額"].sum()
-    month_total = df_total[df_total["日期"].apply(lambda d: d.strftime("%Y-%m") == this_month)]["金額"].sum()
+    st.markdown(f"📌 **今日支出：NT${today_total:.2f}**")
 
-    st.subheader("💰 支出總覽")
-    st.markdown(f"📆 **今日支出：NT${today_total:.2f}**")
-    st.markdown(f"📅 **本月支出：NT${month_total:.2f}**")
+    # 選擇月份總支出
+    if selected_month == "全部":
+        month_total = df_total["金額"].sum()
+        st.markdown(f"📌 **全部月份總支出：NT${month_total:.2f}**")
+    else:
+        month_total = df_total[df_total["日期"].apply(lambda d: d.strftime("%Y-%m") == selected_month)]["金額"].sum()
+        st.markdown(f"📌 **{selected_month} 總支出：NT${month_total:.2f}**")
 
-# 📋 帳目清單
-st.header("📋 帳目清單")
-
-if not st.session_state.records:
-    st.info("目前沒有資料")
-else:
-    df = pd.DataFrame(st.session_state.records)
-    df = df.sort_values(by="日期")
-
-    # 🔍 搜尋與月份篩選
-    with st.expander("🔍 搜尋與月份篩選"):
-        keyword = st.text_input("輸入關鍵字（分類或備註）").strip()
-        all_months = sorted(set([r["日期"].strftime("%Y-%m") for r in st.session_state.records]))
-        selected_month = st.selectbox("選擇月份", ["全部"] + all_months)
-
+    # 篩選資料
+    df = df_total.copy()
     if keyword:
         df = df[df["分類"].str.contains(keyword, case=False) | df["備註"].str.contains(keyword, case=False)]
     if selected_month != "全部":
-        df = df[df["日期"].apply(lambda d: d.strftime("%Y-%m")) == selected_month]
+        df = df[df["日期"].apply(lambda d: d.strftime("%Y-%m") == selected_month)]
 
+    df = df.sort_values(by="日期").reset_index(drop=False)
+    df["日期顯示"] = df["日期"].astype(str)
+
+    # 同日僅顯示一次日期
+    prev_date = ""
+    for i in range(len(df)):
+        if df.at[i, "日期顯示"] == prev_date:
+            df.at[i, "日期顯示"] = ""
+        else:
+            prev_date = df.at[i, "日期顯示"]
+
+    st.subheader("📋 帳目清單")
     if df.empty:
         st.warning("找不到符合條件的資料")
     else:
-        df = df.reset_index(drop=False)  # 保留原始索引作為 index 欄
-
-        df['日期顯示'] = df['日期'].astype(str)
-        prev_date = ""
-        for i in range(len(df)):
-            if df.at[i, '日期顯示'] == prev_date:
-                df.at[i, '日期顯示'] = ""
-            else:
-                prev_date = df.at[i, '日期顯示']
-
         for idx, row in df.iterrows():
             col1, col2, col3, col4, col5, col6 = st.columns([1.5, 1.5, 1.5, 2, 1, 1])
             with col1:
@@ -145,12 +143,18 @@ else:
                     st.success("✅ 已刪除")
                     st.rerun()
 
-# 📊 支出圖表 + 匯出
+# 📊 分類圖表與匯出
 if st.session_state.records:
     st.subheader("📊 各分類支出圖")
-    chart_data = pd.DataFrame(st.session_state.records).groupby("分類")["金額"].sum().reset_index()
-    fig = px.pie(chart_data, names="分類", values="金額", title="分類支出比例", hole=0.3)
-    st.plotly_chart(fig, use_container_width=True)
+    chart_df = pd.DataFrame(st.session_state.records)
+    if selected_month != "全部":
+        chart_df = chart_df[chart_df["日期"].apply(lambda d: d.strftime("%Y-%m") == selected_month)]
 
+    if not chart_df.empty:
+        chart_data = chart_df.groupby("分類")["金額"].sum().reset_index()
+        fig = px.pie(chart_data, names="分類", values="金額", title="分類支出比例", hole=0.3)
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 匯出 CSV
     csv_data = pd.DataFrame(st.session_state.records).to_csv(index=False).encode("utf-8-sig")
     st.download_button("📥 匯出資料為 CSV", data=csv_data, file_name="記帳資料.csv", mime="text/csv")
