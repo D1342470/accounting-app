@@ -84,22 +84,7 @@ st.header("📋 帳目清單")
 if not st.session_state.records:
     st.info("目前沒有資料喔！")
 else:
-    # === 🔍 搜尋 + 月份篩選 ===
     df = pd.DataFrame(st.session_state.records)
-
-    col_filter1, col_filter2 = st.columns([2, 2])
-    with col_filter1:
-        search_text = st.text_input("🔎 關鍵字搜尋（分類或備註）", "")
-    with col_filter2:
-        df["年月"] = df["日期"].apply(lambda d: f"{d.year}-{d.month:02d}")
-        all_months = sorted(df["年月"].unique())
-        selected_month = st.selectbox("📅 選擇月份", ["全部"] + all_months)
-
-    if selected_month != "全部":
-        df = df[df["年月"] == selected_month]
-    if search_text:
-        df = df[df["分類"].str.contains(search_text, case=False) | df["備註"].str.contains(search_text, case=False)]
-
     df = df.sort_values(by="日期").reset_index(drop=True)
 
     df['日期顯示'] = df['日期'].astype(str)
@@ -109,6 +94,28 @@ else:
             df.at[i, '日期顯示'] = ""
         else:
             prev_date = df.at[i, '日期顯示']
+
+    for idx, row in df.iterrows():
+        col1, col2, col3, col4, col5, col6 = st.columns([1.5, 1.5, 1.5, 2, 1, 1])
+        with col1:
+            st.markdown(row['日期顯示'])
+        with col2:
+            st.markdown(row['分類'])
+        with col3:
+            st.markdown(f"NT${row['金額']:.2f}")
+        with col4:
+            st.markdown(row['備註'] or "—")
+        with col5:
+            if st.button("✏️", key=f"edit_{idx}"):
+                st.session_state.edit_index = idx
+                selected = st.session_state.records[idx]
+                st.experimental_rerun()
+        with col6:
+            if st.button("🗑️", key=f"delete_{idx}"):
+                st.session_state.records.pop(idx)
+                save_records()
+                st.success("✅ 已刪除")
+                st.experimental_rerun()
 
 # 統計圖表
 if st.session_state.records:
